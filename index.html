@@ -1,113 +1,221 @@
-import pygame
-import random
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Snake Game</title>
 
-# 初始化
-pygame.init()
+<style>
+body{
+    margin:0;
+    background:#111;
+    color:white;
+    font-family:Arial,sans-serif;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+}
 
-# 視窗設定
-WIDTH, HEIGHT = 600, 400
-BLOCK_SIZE = 20
+h1{
+    margin:20px 0 10px;
+}
 
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Snake Game")
+#score{
+    font-size:24px;
+    margin-bottom:10px;
+}
 
-# 顏色
-BLACK = (0, 0, 0)
-GREEN = (0, 255, 0)
-RED = (255, 0, 0)
-WHITE = (255, 255, 255)
+canvas{
+    border:3px solid white;
+    background:black;
+}
 
-clock = pygame.time.Clock()
-font = pygame.font.SysFont(None, 35)
+#msg{
+    margin-top:15px;
+    font-size:18px;
+}
+</style>
+</head>
+<body>
 
-def draw_snake(snake):
-    for block in snake:
-        pygame.draw.rect(
-            screen,
-            GREEN,
-            [block[0], block[1], BLOCK_SIZE, BLOCK_SIZE]
-        )
+<h1>🐍 Snake Game</h1>
+<div id="score">Score: 0</div>
 
-def show_score(score):
-    text = font.render(f"Score: {score}", True, WHITE)
-    screen.blit(text, [10, 10])
+<canvas id="game" width="400" height="400"></canvas>
 
-def game():
-    x = WIDTH // 2
-    y = HEIGHT // 2
+<div id="msg">
+使用 ↑ ↓ ← → 控制方向<br>
+按空白鍵重新開始
+</div>
 
-    dx = 0
-    dy = 0
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
 
-    snake = []
-    snake_length = 1
+const scoreText = document.getElementById("score");
 
-    food_x = random.randrange(0, WIDTH - BLOCK_SIZE, BLOCK_SIZE)
-    food_y = random.randrange(0, HEIGHT - BLOCK_SIZE, BLOCK_SIZE)
+const box = 20;
+const rows = canvas.width / box;
 
-    running = True
+let snake;
+let food;
+let dx;
+let dy;
+let score;
+let gameOver;
 
-    while running:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
+function randomFood(){
+    return {
+        x: Math.floor(Math.random()*rows)*box,
+        y: Math.floor(Math.random()*rows)*box
+    };
+}
 
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_LEFT:
-                    dx = -BLOCK_SIZE
-                    dy = 0
-                elif event.key == pygame.K_RIGHT:
-                    dx = BLOCK_SIZE
-                    dy = 0
-                elif event.key == pygame.K_UP:
-                    dx = 0
-                    dy = -BLOCK_SIZE
-                elif event.key == pygame.K_DOWN:
-                    dx = 0
-                    dy = BLOCK_SIZE
+function resetGame(){
+    snake = [
+        {x: 200, y: 200}
+    ];
 
-        x += dx
-        y += dy
+    food = randomFood();
 
-        # 撞牆
-        if x < 0 or x >= WIDTH or y < 0 or y >= HEIGHT:
-            running = False
+    dx = box;
+    dy = 0;
 
-        screen.fill(BLACK)
+    score = 0;
+    gameOver = false;
 
-        pygame.draw.rect(
-            screen,
-            RED,
-            [food_x, food_y, BLOCK_SIZE, BLOCK_SIZE]
-        )
+    scoreText.textContent = "Score: 0";
+}
 
-        snake_head = [x, y]
-        snake.append(snake_head)
+resetGame();
 
-        if len(snake) > snake_length:
-            del snake[0]
+document.addEventListener("keydown", e => {
 
-        # 撞自己
-        for segment in snake[:-1]:
-            if segment == snake_head:
-                running = False
+    if(e.code === "Space"){
+        resetGame();
+        return;
+    }
 
-        draw_snake(snake)
-        show_score(snake_length - 1)
+    if(gameOver) return;
 
-        pygame.display.update()
+    if(e.key === "ArrowLeft" && dx === 0){
+        dx = -box;
+        dy = 0;
+    }
 
-        # 吃到食物
-        if x == food_x and y == food_y:
-            food_x = random.randrange(
-                0, WIDTH - BLOCK_SIZE, BLOCK_SIZE
-            )
-            food_y = random.randrange(
-                0, HEIGHT - BLOCK_SIZE, BLOCK_SIZE
-            )
-            snake_length += 1
+    if(e.key === "ArrowRight" && dx === 0){
+        dx = box;
+        dy = 0;
+    }
 
-        clock.tick(10)
+    if(e.key === "ArrowUp" && dy === 0){
+        dx = 0;
+        dy = -box;
+    }
+
+    if(e.key === "ArrowDown" && dy === 0){
+        dx = 0;
+        dy = box;
+    }
+});
+
+function draw(){
+
+    if(gameOver){
+
+        ctx.fillStyle="rgba(0,0,0,0.7)";
+        ctx.fillRect(0,0,400,400);
+
+        ctx.fillStyle="red";
+        ctx.font="40px Arial";
+        ctx.textAlign="center";
+        ctx.fillText("GAME OVER",200,200);
+
+        ctx.font="20px Arial";
+        ctx.fillStyle="white";
+        ctx.fillText("按空白鍵重新開始",200,240);
+
+        return;
+    }
+
+    ctx.fillStyle="black";
+    ctx.fillRect(0,0,400,400);
+
+    // food
+    ctx.fillStyle="red";
+    ctx.fillRect(food.x, food.y, box, box);
+
+    let headX = snake[0].x + dx;
+    let headY = snake[0].y + dy;
+
+    // wall collision
+    if(
+        headX < 0 ||
+        headY < 0 ||
+        headX >= 400 ||
+        headY >= 400
+    ){
+        gameOver = true;
+        return;
+    }
+
+    // self collision
+    for(let i=0;i<snake.length;i++){
+        if(
+            snake[i].x === headX &&
+            snake[i].y === headY
+        ){
+            gameOver = true;
+            return;
+        }
+    }
+
+    const head = {
+        x: headX,
+        y: headY
+    };
+
+    snake.unshift(head);
+
+    if(headX === food.x && headY === food.y){
+
+        score++;
+        scoreText.textContent = "Score: " + score;
+
+        food = randomFood();
+
+    }else{
+        snake.pop();
+    }
+
+    // snake
+    for(let i=0;i<snake.length;i++){
+
+        ctx.fillStyle =
+            i===0 ? "#00ff00" : "#44aa44";
+
+        ctx.fillRect(
+            snake[i].x,
+            snake[i].y,
+            box,https://github.com/s114438-gif/s114438-gif.github.io/tree/main
+            box
+        );
+
+        ctx.strokeStyle="#111";
+        ctx.strokeRect(
+            snake[i].x,
+            snake[i].y,
+            box,
+            box
+        );
+    }
+}
+
+setInterval(draw,100);
+</script>
+
+</body>
+</html>
 
     pygame.quit()
 
