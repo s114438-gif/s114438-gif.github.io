@@ -1,114 +1,295 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
-<title>Snake</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🐍 貪吃蛇</title>
+
 <style>
 body{
+    margin:0;
     background:#111;
     color:white;
     text-align:center;
-    font-family:Arial;
+    font-family:Arial,sans-serif;
 }
+
+h1{
+    margin:15px 0;
+}
+
+#score{
+    font-size:22px;
+    margin-bottom:10px;
+}
+
 canvas{
-    background:black;
-    border:2px solid white;
+    background:#000;
+    border:3px solid white;
+}
+
+button{
+    margin-top:10px;
+    padding:10px 20px;
+    font-size:18px;
+    cursor:pointer;
 }
 </style>
 </head>
 <body>
 
-<h1>🐍 Snake</h1>
-<p>方向鍵控制</p>
+<h1>🐍 貪吃蛇</h1>
+
+<div id="score">分數：0</div>
 
 <canvas id="game" width="400" height="400"></canvas>
+
+<br>
+<button onclick="resetGame()">重新開始</button>
+
+<p>方向鍵控制，撞牆或撞自己遊戲結束</p>
 
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
+const scoreEl = document.getElementById("score");
 
 const grid = 20;
+const tileCount = 20;
 
-let snake = [
-    {x: 10, y: 10}
-];
+let snake;
+let dx;
+let dy;
+let food;
+let score;
+let gameOver;
 
-let dx = 1;
-let dy = 0;
+function randomFood(){
+    return {
+        x: Math.floor(Math.random()*tileCount),
+        y: Math.floor(Math.random()*tileCount)
+    };
+}
 
-let food = {
-    x: 5,
-    y: 5
-};
+function resetGame(){
+    snake = [
+        {x:10,y:10},
+        {x:9,y:10},
+        {x:8,y:10}
+    ];
+
+    dx = 1;
+    dy = 0;
+
+    food = randomFood();
+
+    score = 0;
+    gameOver = false;
+
+    scoreEl.textContent = "分數：0";
+}
 
 document.addEventListener("keydown",(e)=>{
 
+    if(gameOver){
+        if(e.code==="Space" || e.code==="Enter"){
+            resetGame();
+        }
+    }
+
     if(e.key==="ArrowUp" && dy===0){
-        dx=0; dy=-1;
+        dx=0;
+        dy=-1;
     }
 
     if(e.key==="ArrowDown" && dy===0){
-        dx=0; dy=1;
+        dx=0;
+        dy=1;
     }
 
     if(e.key==="ArrowLeft" && dx===0){
-        dx=-1; dy=0;
+        dx=-1;
+        dy=0;
     }
 
     if(e.key==="ArrowRight" && dx===0){
-        dx=1; dy=0;
+        dx=1;
+        dy=0;
     }
 });
 
-function loop(){
+function update(){
+
+    if(gameOver) return;
 
     const head = {
         x: snake[0].x + dx,
         y: snake[0].y + dy
     };
 
+    // 撞牆
+    if(
+        head.x < 0 ||
+        head.y < 0 ||
+        head.x >= tileCount ||
+        head.y >= tileCount
+    ){
+        gameOver = true;
+        return;
+    }
+
+    // 撞自己
+    for(let part of snake){
+        if(head.x===part.x && head.y===part.y){
+            gameOver = true;
+            return;
+        }
+    }
+
     snake.unshift(head);
 
-    if(head.x === food.x && head.y === food.y){
+    if(head.x===food.x && head.y===food.y){
 
-        food = {
-            x: Math.floor(Math.random()*20),
-            y: Math.floor(Math.random()*20)
-        };
+        score++;
+        scoreEl.textContent = "分數：" + score;
+
+        do{
+            food = randomFood();
+        }while(
+            snake.some(
+                s => s.x===food.x && s.y===food.y
+            )
+        );
 
     }else{
         snake.pop();
     }
-
-    if(
-        head.x < 0 ||
-        head.y < 0 ||
-        head.x >= 20 ||
-        head.y >= 20
-    ){
-        alert("Game Over");
-        location.reload();
-        return;
-    }
-
-    ctx.clearRect(0,0,400,400);
-
-    ctx.fillStyle="red";
-    ctx.fillRect(food.x*20,food.y*20,20,20);
-
-    ctx.fillStyle="lime";
-
-    snake.forEach(part=>{
-        ctx.fillRect(
-            part.x*20,
-            part.y*20,
-            20,
-            20
-        );
-    });
 }
 
-setInterval(loop,150);
+function drawSnakeHead(head){
+
+    const px = head.x * grid;
+    const py = head.y * grid;
+
+    // 頭
+    ctx.fillStyle = "#00ff00";
+
+    ctx.beginPath();
+    ctx.roundRect(px+1, py+1, 18, 18, 8);
+    ctx.fill();
+
+    // 眼睛位置
+    let eye1x, eye1y, eye2x, eye2y;
+
+    if(dx===1){ // 右
+        eye1x = px+13; eye1y = py+6;
+        eye2x = px+13; eye2y = py+14;
+    }
+    else if(dx===-1){ // 左
+        eye1x = px+7; eye1y = py+6;
+        eye2x = px+7; eye2y = py+14;
+    }
+    else if(dy===-1){ // 上
+        eye1x = px+6; eye1y = py+7;
+        eye2x = px+14; eye2y = py+7;
+    }
+    else{ // 下
+        eye1x = px+6; eye1y = py+13;
+        eye2x = px+14; eye2y = py+13;
+    }
+
+    // 白眼
+    ctx.fillStyle = "white";
+
+    ctx.beginPath();
+    ctx.arc(eye1x, eye1y, 3, 0, Math.PI*2);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(eye2x, eye2y, 3, 0, Math.PI*2);
+    ctx.fill();
+
+    // 瞳孔
+    ctx.fillStyle = "black";
+
+    ctx.beginPath();
+    ctx.arc(eye1x, eye1y, 1.5, 0, Math.PI*2);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(eye2x, eye2y, 1.5, 0, Math.PI*2);
+    ctx.fill();
+}
+
+function draw(){
+
+    ctx.fillStyle = "black";
+    ctx.fillRect(0,0,400,400);
+
+    // 食物(蘋果)
+    ctx.fillStyle = "red";
+    ctx.beginPath();
+    ctx.arc(
+        food.x*grid+10,
+        food.y*grid+10,
+        8,
+        0,
+        Math.PI*2
+    );
+    ctx.fill();
+
+    // 蛇身
+    for(let i=snake.length-1;i>=1;i--){
+
+        const part = snake[i];
+
+        ctx.fillStyle="#3cb043";
+
+        ctx.beginPath();
+        ctx.roundRect(
+            part.x*grid+2,
+            part.y*grid+2,
+            16,
+            16,
+            6
+        );
+        ctx.fill();
+    }
+
+    // 蛇頭
+    drawSnakeHead(snake[0]);
+
+    if(gameOver){
+
+        ctx.fillStyle="rgba(0,0,0,0.6)";
+        ctx.fillRect(0,0,400,400);
+
+        ctx.fillStyle="red";
+        ctx.font="36px Arial";
+        ctx.textAlign="center";
+        ctx.fillText(
+            "GAME OVER",
+            200,
+            180
+        );
+
+        ctx.fillStyle="white";
+        ctx.font="18px Arial";
+        ctx.fillText(
+            "按 Space 或 Enter 重新開始",
+            200,
+            220
+        );
+    }
+}
+
+function gameLoop(){
+    update();
+    draw();
+}
+
+resetGame();
+setInterval(gameLoop,120);
 </script>
 
 </body>
