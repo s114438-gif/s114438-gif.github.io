@@ -91,10 +91,10 @@ resetGame();
 
 document.addEventListener("keydown", e => {
 
-    if(e.code === "Space"){
-        resetGame();
-        return;
-    }
+   if(e.code === "Space" || e.code === "Enter"){
+    resetGame();
+    return;
+}
 
     if(gameOver) return;
 
