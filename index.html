@@ -2,8 +2,8 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🐍 貪吃蛇 - 難度獨立紀錄版</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>🐍 貪吃蛇 - 手機滑動雙用版</title>
 
 <style>
 body {
@@ -12,24 +12,27 @@ body {
     color: white;
     text-align: center;
     font-family: Arial, sans-serif;
+    /* 防止手機瀏覽器隨意下拉重新整理 */
+    overscroll-behavior-y: contain; 
 }
 
 h1 {
-    margin: 15px 0;
+    margin: 10px 0;
+    font-size: 24px;
 }
 
 /* 分數看板區 */
 #info-panel {
-    font-size: 22px;
-    margin-bottom: 15px;
+    font-size: 18px;
+    margin-bottom: 10px;
     display: flex;
     justify-content: center;
-    gap: 20px;
+    gap: 15px;
 }
 
 .score-box {
     background: #222;
-    padding: 5px 15px;
+    padding: 5px 10px;
     border-radius: 5px;
     border: 1px solid #444;
 }
@@ -39,47 +42,45 @@ h1 {
     border-color: #ffcc00;
 }
 
-/* 左右並排的外容器 */
+/* 支援手機的彈性排版 */
 .game-container {
     display: flex;
+    flex-direction: row;
     justify-content: center;
     align-items: flex-start;
-    gap: 20px;
+    gap: 15px;
     margin: 0 auto;
     padding: 0 10px;
+    max-width: 100%;
 }
 
-/* 左邊難度選單 */
+/* 難度選單面板 */
 .difficulty-panel {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
     background: #222;
-    padding: 15px;
+    padding: 12px;
     border: 2px solid #444;
     border-radius: 8px;
 }
 
 .difficulty-panel h3 {
     margin: 0 0 5px 0;
-    font-size: 18px;
+    font-size: 16px;
     color: #aaa;
 }
 
 /* 按鈕樣式 */
 .diff-btn {
-    padding: 10px 20px;
-    font-size: 16px;
+    padding: 8px 16px;
+    font-size: 14px;
     font-weight: bold;
     color: white;
     background: #333;
     border: 2px solid #555;
     border-radius: 5px;
     cursor: pointer;
-}
-
-.diff-btn:hover {
-    background: #444;
 }
 
 /* 被選中時的亮綠色 */
@@ -89,15 +90,19 @@ h1 {
     border-color: #fff;
 }
 
-/* 遊戲畫布 */
+/* 遊戲畫布 - 加上 max-width 確保在小手機上不會爆出去 */
 canvas {
     background: #000;
     border: 3px solid white;
     display: block;
+    max-width: 100%;
+    height: auto;
+    /* 核心：禁止智慧型手機在畫布上滑動時觸控預設滾動，全留給遊戲監聽 */
+    touch-action: none; 
 }
 
 #controls {
-    margin-top: 15px;
+    margin-top: 10px;
 }
 
 #restart-btn {
@@ -112,6 +117,29 @@ canvas {
 
 #restart-btn:hover {
     background: #c0392b;
+}
+
+.tip {
+    font-size: 14px;
+    color: #888;
+    margin: 5px 0;
+}
+
+/* 當手機直立（寬度不夠）時，自動把難度選單移到 Canvas 上方 */
+@media (max-width: 550px) {
+    .game-container {
+        flex-direction: column;
+        align-items: center;
+    }
+    .difficulty-panel {
+        flex-direction: row;
+        width: 100%;
+        box-sizing: border-box;
+        justify-content: space-around;
+    }
+    .difficulty-panel h3 {
+        display: none; /* 空間不足，隱藏標題 */
+    }
 }
 </style>
 </head>
@@ -140,7 +168,8 @@ canvas {
 
 <div id="controls">
     <button id="restart-btn" onclick="resetGame()">重新開始</button>
-    <p>方向鍵控制，撞牆或撞自己遊戲結束</p>
+    <p class="tip">🖥️ 電腦：請用鍵盤方向鍵控制</p>
+    <p class="tip">📱 手機：在遊戲畫面上<b>用手指滑動</b>即可控制轉彎</p>
 </div>
 
 <script>
@@ -162,21 +191,24 @@ let highScore = 0;
 let gameOver;
 let changeDirectionExecuted;
 let gameInterval; 
-let currentSpeedSetting = 'normal'; // 預設中等難度
+let currentSpeedSetting = 'normal';
 
-// 速度設定（數字越小移速越快）
 const speeds = {
     easy: 180,    
     normal: 120,  
     hard: 70      
 };
 
-// 難度對應的中文名稱（用來顯示在最高紀錄標籤上）
 const difficultyNames = {
     easy: "難度 1",
     normal: "難度 2",
     hard: "難度 3"
 };
+
+if (localStorage.getItem("snakeHighScore")) {
+    highScore = parseInt(localStorage.getItem("snakeHighScore"));
+    highScoreEl.textContent = highScore;
+}
 
 function randomFood(){
     return {
@@ -185,16 +217,13 @@ function randomFood(){
     };
 }
 
-// 讀取當前難度的最高紀錄
 function loadHighScore() {
-    const key = "snakeHighScore_" + currentSpeedSetting; // 動態組出如 snakeHighScore_easy 的標籤
+    const key = "snakeHighScore_" + currentSpeedSetting; 
     if (localStorage.getItem(key)) {
         highScore = parseInt(localStorage.getItem(key));
     } else {
-        highScore = 0; // 如果這個難度還沒有紀錄，就從 0 開始
+        highScore = 0; 
     }
-    
-    // 更新畫面的文字與分數
     highScoreLabelEl.textContent = `👑 ${difficultyNames[currentSpeedSetting]} 最高紀錄`;
     highScoreEl.textContent = highScore;
 }
@@ -202,7 +231,6 @@ function loadHighScore() {
 function changeDifficulty(level) {
     currentSpeedSetting = level;
     updateButtonStyles();
-    // 每次換難度時，必須重新載入該難度專屬的最高紀錄
     loadHighScore();
     resetGame();
 }
@@ -238,6 +266,9 @@ function resetGame() {
     gameInterval = setInterval(gameLoop, speeds[currentSpeedSetting]);
 }
 
+// ----------------------------------------------------
+// ⌨️ 控制系統一：電腦鍵盤監聽
+// ----------------------------------------------------
 document.addEventListener("keydown", (e) => {
     if(gameOver){
         if(e.code==="Space" || e.code==="Enter"){
@@ -254,124 +285,22 @@ document.addEventListener("keydown", (e) => {
     if(e.key==="ArrowRight" && dx===0){ dx=1; dy=0; changeDirectionExecuted = true; }
 });
 
-function update(){
-    if(gameOver) return;
+// ----------------------------------------------------
+// 📱 控制系統二：手機觸控滑動監聽 (Swipe Detection)
+// ----------------------------------------------------
+let touchStartX = 0;
+let touchStartY = 0;
 
-    changeDirectionExecuted = false;
-
-    const head = {
-        x: snake[0].x + dx,
-        y: snake[0].y + dy
-    };
-
-    if(head.x < 0 || head.y < 0 || head.x >= tileCount || head.y >= tileCount){
-        gameOver = true;
+// 當手指一碰到 Canvas
+canvas.addEventListener("touchstart", (e) => {
+    if (gameOver) {
+        resetGame(); // 手機版死了之後，隨便在畫布上摸一下就能復活重新開始！
         return;
     }
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+}, { passive: true });
 
-    snake.unshift(head);
-
-    if(head.x===food.x && head.y===food.y){
-        score++;
-        scoreEl.textContent = score;
-
-        // 當前分數超越「當前難度」的最高紀錄時，即時更新並儲存
-        if (score > highScore) {
-            highScore = score;
-            highScoreEl.textContent = highScore;
-            const key = "snakeHighScore_" + currentSpeedSetting;
-            localStorage.setItem(key, highScore);
-        }
-
-        do{
-            food = randomFood();
-        }while(
-            snake.some(s => s.x===food.x && s.y===food.y)
-        );
-    } else {
-        snake.pop();
-    }
-
-    for(let i = 1; i < snake.length; i++){
-        if(snake[0].x === snake[i].x && snake[0].y === snake[i].y){
-            gameOver = true;
-            return;
-        }
-    }
-}
-
-function drawSnakeHead(head){
-    const px = head.x * grid;
-    const py = head.y * grid;
-
-    ctx.fillStyle = "#00ff00";
-    ctx.fillRect(px+1, py+1, 18, 18);
-
-    let eye1x, eye1y, eye2x, eye2y;
-    if(dx===1){ eye1x = px+13; eye1y = py+6; eye2x = px+13; eye2y = py+14; }
-    else if(dx===-1){ eye1x = px+7; eye1y = py+6; eye2x = px+7; eye2y = py+14; }
-    else if(dy===-1){ eye1x = px+6; eye1y = py+7; eye2x = px+14; eye2y = py+7; }
-    else { eye1x = px+6; eye1y = py+13; eye2x = px+14; eye2y = py+13; }
-
-    ctx.fillStyle = "white";
-    ctx.beginPath();
-    ctx.arc(eye1x, eye1y, 3, 0, Math.PI*2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(eye2x, eye2y, 3, 0, Math.PI*2);
-    ctx.fill();
-
-    ctx.fillStyle = "black";
-    ctx.beginPath();
-    ctx.arc(eye1x, eye1y, 1.5, 0, Math.PI*2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(eye2x, eye2y, 1.5, 0, Math.PI*2);
-    ctx.fill();
-}
-
-function draw(){
-    ctx.fillStyle = "black";
-    ctx.fillRect(0, 0, 400, 400);
-
-    ctx.fillStyle = "red";
-    ctx.beginPath();
-    ctx.arc(food.x*grid+10, food.y*grid+10, 8, 0, Math.PI*2);
-    ctx.fill();
-
-    ctx.fillStyle = "#3cb043";
-    for(let i=snake.length-1; i>=1; i--){
-        const part = snake[i];
-        ctx.fillRect(part.x*grid+2, part.y+2? (part.y*grid+2) : (part.y*grid+2), 16, 16);
-    }
-
-    drawSnakeHead(snake[0]);
-
-    if(gameOver){
-        ctx.fillStyle = "rgba(0,0,0,0.6)";
-        ctx.fillRect(0, 0, 400, 400);
-
-        ctx.fillStyle = "red";
-        ctx.font = "36px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText("GAME OVER", 200, 180);
-
-        ctx.fillStyle = "white";
-        ctx.font = "18px Arial";
-        ctx.fillText("按 Space 或 Enter 重新開始", 200, 220);
-    }
-}
-
-function gameLoop(){
-    update();
-    draw();
-}
-
-// 啟動流程：先更新按鈕樣式 -> 載入當前難度紀錄 -> 啟動遊戲
-updateButtonStyles();
-loadHighScore();
-resetGame();
-</script>
-
-</body>
-</html>
+// 當手指在 Canvas 上滑動並離開時
+canvas.addEventListener("touchend", (e) => {
+    if (changeDirectionExecuted || gameOver) return;
