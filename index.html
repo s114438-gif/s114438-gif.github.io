@@ -397,7 +397,7 @@ function update(){
             highScore = score;
             highScoreEl.textContent = highScore;
             const key = "snakeHighScore_" + currentSpeedSetting;
-            safeSetHighScore(key, highScore); // 使用安全的儲存方式
+            safeSetHighScore(key, highScore);
         }
 
         do{
@@ -410,37 +410,4 @@ function update(){
     }
 
     for(let i = 1; i < snake.length; i++){
-        if(snake[0].x === snake[i].x && snake[0].y === snake[i].y){
-            gameOver = true;
-            return;
-        }
-    }
-}
-
-function drawSnakeHead(head){
-    const px = head.x * grid;
-    const py = head.y * grid;
-
-    ctx.fillStyle = "#00ff00";
-    ctx.fillRect(px+1, py+1, 18, 18);
-
-    let eye1x, eye1y, eye2x, eye2y;
-    if(dx===1){ eye1x = px+13; eye1y = py+6; eye2x = px+13; eye2y = py+14; }
-    else if(dx===-1){ eye1x = px+7; eye1y = py+6; eye2x = px+7; eye2y = py+14; }
-    else if(dy===-1){ eye1x = px+6; eye1y = py+7; eye2x = px+14; eye2y = py+7; }
-    else { eye1x = px+6; eye1y = py+13; eye2x = px+14; eye2y = py+13; }
-
-    ctx.fillStyle = "white";
-    ctx.beginPath();
-    ctx.arc(eye1x, eye1y, 3, 0, Math.PI*2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(eye2x, eye2y, 3, 0, Math.PI*2);
-    ctx.fill();
-
-    ctx.fillStyle = "black";
-    ctx.beginPath();
-    ctx.arc(eye1x, eye1y, 1.5, 0, Math.PI*2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(eye2x, eye2y, 1.5,
+        if(snake[0].x === snake[i].x && snake[0].y === snake
