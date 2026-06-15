@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🐍 貪吃蛇 - 終極穩定版</title>
+<title>🐍 貪吃蛇 - 難度獨立紀錄版</title>
 
 <style>
 body {
@@ -121,7 +121,7 @@ canvas {
 
 <div id="info-panel">
     <div class="score-box">分數：<span id="score">0</span></div>
-    <div class="score-box" id="high-score-box">👑 最高紀錄：<span id="high-score">0</span></div>
+    <div class="score-box" id="high-score-box"><span id="high-score-label">👑 最高紀錄</span>：<span id="high-score">0</span></div>
 </div>
 
 <div class="game-container">
@@ -148,6 +148,7 @@ const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 const scoreEl = document.getElementById("score");
 const highScoreEl = document.getElementById("high-score");
+const highScoreLabelEl = document.getElementById("high-score-label");
 
 const grid = 20;
 const tileCount = 20;
@@ -170,11 +171,12 @@ const speeds = {
     hard: 70      
 };
 
-// 讀取最高紀錄
-if (localStorage.getItem("snakeHighScore")) {
-    highScore = parseInt(localStorage.getItem("snakeHighScore"));
-    highScoreEl.textContent = highScore;
-}
+// 難度對應的中文名稱（用來顯示在最高紀錄標籤上）
+const difficultyNames = {
+    easy: "難度 1",
+    normal: "難度 2",
+    hard: "難度 3"
+};
 
 function randomFood(){
     return {
@@ -183,9 +185,25 @@ function randomFood(){
     };
 }
 
+// 讀取當前難度的最高紀錄
+function loadHighScore() {
+    const key = "snakeHighScore_" + currentSpeedSetting; // 動態組出如 snakeHighScore_easy 的標籤
+    if (localStorage.getItem(key)) {
+        highScore = parseInt(localStorage.getItem(key));
+    } else {
+        highScore = 0; // 如果這個難度還沒有紀錄，就從 0 開始
+    }
+    
+    // 更新畫面的文字與分數
+    highScoreLabelEl.textContent = `👑 ${difficultyNames[currentSpeedSetting]} 最高紀錄`;
+    highScoreEl.textContent = highScore;
+}
+
 function changeDifficulty(level) {
     currentSpeedSetting = level;
     updateButtonStyles();
+    // 每次換難度時，必須重新載入該難度專屬的最高紀錄
+    loadHighScore();
     resetGame();
 }
 
@@ -199,7 +217,7 @@ function updateButtonStyles() {
     if (currentSpeedSetting === 'hard') document.getElementById('btn-hard').className = 'diff-btn active';
 }
 
-function resetGame(){
+function resetGame() {
     snake = [
         {x:10, y:10},
         {x:9, y:10},
@@ -257,10 +275,12 @@ function update(){
         score++;
         scoreEl.textContent = score;
 
+        // 當前分數超越「當前難度」的最高紀錄時，即時更新並儲存
         if (score > highScore) {
             highScore = score;
             highScoreEl.textContent = highScore;
-            localStorage.setItem("snakeHighScore", highScore);
+            const key = "snakeHighScore_" + currentSpeedSetting;
+            localStorage.setItem(key, highScore);
         }
 
         do{
@@ -284,7 +304,6 @@ function drawSnakeHead(head){
     const px = head.x * grid;
     const py = head.y * grid;
 
-    // 頭部主體 (改回最安全的 fillRect)
     ctx.fillStyle = "#00ff00";
     ctx.fillRect(px+1, py+1, 18, 18);
 
@@ -312,27 +331,22 @@ function drawSnakeHead(head){
 }
 
 function draw(){
-    // 背景
     ctx.fillStyle = "black";
     ctx.fillRect(0, 0, 400, 400);
 
-    // 食物
     ctx.fillStyle = "red";
     ctx.beginPath();
     ctx.arc(food.x*grid+10, food.y*grid+10, 8, 0, Math.PI*2);
     ctx.fill();
 
-    // 蛇身 (改回最安全的 fillRect)
     ctx.fillStyle = "#3cb043";
     for(let i=snake.length-1; i>=1; i--){
         const part = snake[i];
-        ctx.fillRect(part.x*grid+2, part.y*grid+2, 16, 16);
+        ctx.fillRect(part.x*grid+2, part.y+2? (part.y*grid+2) : (part.y*grid+2), 16, 16);
     }
 
-    // 蛇頭
     drawSnakeHead(snake[0]);
 
-    // 遊戲結束畫面
     if(gameOver){
         ctx.fillStyle = "rgba(0,0,0,0.6)";
         ctx.fillRect(0, 0, 400, 400);
@@ -353,8 +367,9 @@ function gameLoop(){
     draw();
 }
 
-// 確保一開始樣式和遊戲正常啟動
+// 啟動流程：先更新按鈕樣式 -> 載入當前難度紀錄 -> 啟動遊戲
 updateButtonStyles();
+loadHighScore();
 resetGame();
 </script>
 
