@@ -231,3 +231,139 @@ document.addEventListener("keydown",(e)=>{
     }
 
     if(changeDirectionExecuted) return;
+
+    if(e.key==="ArrowUp" && dy===0){ dx=0; dy=-1; changeDirectionExecuted = true; }
+    if(e.key==="ArrowDown" && dy===0){ dx=0; dy=1; changeDirectionExecuted = true; }
+    if(e.key==="ArrowLeft" && dx===0){ dx=-1; dy=0; changeDirectionExecuted = true; }
+    if(e.key==="ArrowRight" && dx===0){ dx=1; dy=0; changeDirectionExecuted = true; }
+});
+
+function update(){
+    if(gameOver) return;
+
+    changeDirectionExecuted = false;
+
+    const head = {
+        x: snake[0].x + dx,
+        y: snake[0].y + dy
+    };
+
+    if(head.x < 0 || head.y < 0 || head.x >= tileCount || head.y >= tileCount){
+        gameOver = true;
+        checkHighScore(); // 遊戲結束時檢查是否破紀錄
+        return;
+    }
+
+    snake.unshift(head);
+
+    if(head.x===food.x && head.y===food.y){
+        score++;
+        scoreEl.textContent = score;
+
+        // 即時檢查分數是否超越最高紀錄，這樣玩的時候比較有成就感！
+        if (score > highScore) {
+            highScore = score;
+            highScoreEl.textContent = highScore;
+            localStorage.setItem("snakeHighScore", highScore); // 即時儲存到瀏覽器
+        }
+
+        do{
+            food = randomFood();
+        }while(
+            snake.some(s => s.x===food.x && s.y===food.y)
+        );
+    } else {
+        snake.pop();
+    }
+
+    for(let i = 1; i < snake.length; i++){
+        if(snake[0].x === snake[i].x && snake[0].y === snake[i].y){
+            gameOver = true;
+            checkHighScore(); // 遊戲結束時檢查是否破紀錄
+            return;
+        }
+    }
+}
+
+// 新增：檢查與儲存最高分數的函式
+function checkHighScore() {
+    if (score > highScore) {
+        highScore = score;
+        highScoreEl.textContent = highScore;
+        localStorage.setItem("snakeHighScore", highScore);
+    }
+}
+
+function drawSnakeHead(head){
+    const px = head.x * grid;
+    const py = head.y * grid;
+
+    ctx.fillStyle = "#00ff00";
+    ctx.beginPath();
+    ctx.roundRect(px+1, py+1, 18, 18, 8);
+    ctx.fill();
+
+    let eye1x, eye1y, eye2x, eye2y;
+    if(dx===1){ eye1x = px+13; eye1y = py+6; eye2x = px+13; eye2y = py+14; }
+    else if(dx===-1){ eye1x = px+7; eye1y = py+6; eye2x = px+7; eye2y = py+14; }
+    else if(dy===-1){ eye1x = px+6; eye1y = py+7; eye2x = px+14; eye2y = py+7; }
+    else { eye1x = px+6; eye1y = py+13; eye2x = px+14; eye2y = py+13; }
+
+    ctx.fillStyle = "white";
+    ctx.beginPath();
+    ctx.arc(eye1x, eye1y, 3, 0, Math.PI*2);
+    ctx.arc(eye2x, eye2y, 3, 0, Math.PI*2);
+    ctx.fill();
+
+    ctx.fillStyle = "black";
+    ctx.beginPath();
+    ctx.arc(eye1x, eye1y, 1.5, 0, Math.PI*2);
+    ctx.arc(eye2x, eye2y, 1.5, 0, Math.PI*2);
+    ctx.fill();
+}
+
+function draw(){
+    ctx.fillStyle = "black";
+    ctx.fillRect(0,0,400,400);
+
+    ctx.fillStyle = "red";
+    ctx.beginPath();
+    ctx.arc(food.x*grid+10, food.y*grid+10, 8, 0, Math.PI*2);
+    ctx.fill();
+
+    for(let i=snake.length-1; i>=1; i--){
+        const part = snake[i];
+        ctx.fillStyle="#3cb043";
+        ctx.beginPath();
+        ctx.roundRect(part.x*grid+2, part.y*grid+2, 16, 16, 6);
+        ctx.fill();
+    }
+
+    drawSnakeHead(snake[0]);
+
+    if(gameOver){
+        ctx.fillStyle="rgba(0,0,0,0.6)";
+        ctx.fillRect(0,0,400,400);
+
+        ctx.fillStyle="red";
+        ctx.font="36px Arial";
+        ctx.textAlign="center";
+        ctx.fillText("GAME OVER", 200, 180);
+
+        ctx.fillStyle="white";
+        ctx.font="18px Arial";
+        ctx.fillText("按 Space 或 Enter 重新開始", 200, 220);
+    }
+}
+
+function gameLoop(){
+    update();
+    draw();
+}
+
+updateButtonStyles();
+resetGame();
+</script>
+
+</body>
+</html>
